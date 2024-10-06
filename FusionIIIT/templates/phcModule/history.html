@@ -22,8 +22,6 @@
 
     <div class="ui active tab" data-tab="prescriptionhistory">
         <div id="presc_print" class="ui vertical segment" >
-            <h4 align="center">D - No.of days, &nbsp;&nbsp; T - No.of times per day</h4>
-
             <table  border=1 class="ui very basic collapsing celled large sortable table"
                   style="padding-left: 2.5%;padding-right: 2.5%;margin: auto;" >
                 <thead>
@@ -39,20 +37,7 @@
                         Details
                     </td>
                     <td style="font-weight:bold;color:black;">
-                        Test
-                    </td>
-                    <td style="font-weight:bold;color:black;">
-                        Report
-                    </td>
-
-
-                    <td style="font-weight:bold;color:black;">
-
-                      <table>
-
-                        <tr><td style="font-weight:bold;color:black;">Medicine</td><td>D</td><td>T</td></tr>
-
-                      </table>
+                        View
                     </td>
 
                 </tr>
@@ -79,25 +64,7 @@
                         {{pre.details}}
                     </td>
                     <td>
-                        {{pre.test}}
-                    </td>
-                   
-                    <td style="white-space:nowrap;">
-                        {% if pre.file != None %}
-                        <a href="{{ pre.file }}" download>
-                            <i class="ui download icon right floated"></i>
-                        </a>
-                        {% endif %}
-                    </td>
-
-                    <td>
-                      <table>
-                        {% for medicine in medicines %}
-                            {% if medicine.prescription_id.id == pre.id %}
-                                  <tr><td>{{medicine.medicine_id}}</td><td>{{medicine.days}}</td><td>{{medicine.times}}</td></tr>
-                            {% endif %}
-                        {% endfor%}
-                      </table>
+                        <button class="view-followup-btn"><a style="color: white;" href="{% url 'healthcenter:student_view_prescription' prescription_id=pre.id %}">View/Follow-up</a></button>
                     </td>
                 </tr>
 
@@ -139,6 +106,7 @@
                 </tr>
                 </thead>
 
+                {% comment %}
                 <tbody>
                 {% for  ambulance in ambulances%}
                 <tr>
@@ -157,18 +125,45 @@
                     <td style="white-space:nowrap;">
                         {{ambulance.end_date}}
                     </td>
-					<td>
+					<!-- <td>
                         {% if ambulance.end_date >= curr_date %}
                            <input type="button" onclick="rem({{ambulance.pk}})" id="{{ambulance.pk}}" name="cancel" value="Cancel"class="ui red button" />
                         {% endif %}
-                    </td>  
+                    </td>   -->
                 </tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
     </div> {% endcomment %}
-
+    <style>
+        .view-followup-btn {
+            font-size: 13px;
+            background-color: #2185D0;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .view-followup-btn:hover {
+            background-color: #0b5ed7;
+        }
+        .w-full {
+            width: 100%;
+        }
+        .flex {
+            display: flex;
+            justify-content: space-between;
+        }
+        .flex-col {
+            flex-direction: column;
+        }
+        .bbx {
+            border: 1px solid red;
+        }
+    </style>
 <script>
             function rem(id){
            
@@ -386,11 +381,11 @@
                     </td>
 
                    
-					<td>
+					<!-- <td>
 
                         <input type="button" onclick="rm({{appointment.pk}})" id="{{appointment.pk}}" name="cancel" value="Cancel"class="ui red button" />
 
-                    </td> 
+                    </td>  -->
                 </tr>
                 {% endfor %}
                 </tbody>

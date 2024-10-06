@@ -48,6 +48,14 @@ class Pathologist(models.Model):
 
     def __str__(self):
         return self.pathologist_name
+    
+class Announcements(models.Model):
+    anno_id = models.ForeignKey(ExtraInfo, on_delete=models.CASCADE, related_name='announcements_made')
+    ann_date = models.DateTimeField(default="04-04-2021")
+    message = models.CharField(max_length=200)   
+    upload_announcement = models.FileField(upload_to='health_center/upload_announcement', null=True, default=" ")
+    def __str__(self):
+        return str(self.anno_id.user.username)
 
 # class Complaint(models.Model):
 #     user_id = models.ForeignKey(ExtraInfo,on_delete=models.CASCADE)

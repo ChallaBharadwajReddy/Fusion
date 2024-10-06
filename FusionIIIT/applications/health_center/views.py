@@ -17,7 +17,7 @@ from notification.views import  healthcare_center_notif
 from .models import ( Constants,All_Medicine,All_Prescribed_medicine,All_Prescription,Prescription_followup,
                     Present_Stock,Doctor,Pathologist,
                     Doctors_Schedule,Pathologist_Schedule,Stock_entry,
-                    medical_relief,MedicalProfile,Required_medicine,files,Required_tabel_last_updated)
+                    medical_relief,MedicalProfile,Required_medicine,files,Required_tabel_last_updated,Announcements)
 from .utils import datetime_handler, compounder_view_handler, student_view_handler
 from applications.filetracking.sdk.methods import *
 from django.db.models import Q
@@ -90,6 +90,7 @@ def compounder_view(request):
             schedule1=Pathologist_Schedule.objects.select_related('pathologist_id').all().order_by('pathologist_id')
             # expired=Expiry.objects.select_related('medicine_id').filter(expiry_date__lt=datetime.now(),returned=False).order_by('expiry_date')
             # live_meds=Expiry.objects.select_related('medicine_id').filter(returned=False).order_by('quantity')
+            announcements_data=Announcements.objects.all().order_by('-id').values()
             page_size=2
             fir=Required_tabel_last_updated.objects.first()
             if fir == None:
@@ -288,7 +289,7 @@ def compounder_view(request):
                           {'days': days, 'users': users,'expired':ExpiredstockContext,
                            'stocks': stocks,
                             'doctors': doctors, 'pathologists':pathologists, 
-                        'schedule': schedule, 'schedule1': schedule1, 'live_meds': stockContext, 'presc_hist': prescContext,'inbox_files':inbox,'medicines_presc':medicine_presc})
+                        'schedule': schedule, 'schedule1': schedule1, 'live_meds': stockContext, 'presc_hist': prescContext,'inbox_files':inbox,'medicines_presc':medicine_presc,'announcements':announcements_data,})
     else:
         return HttpResponseRedirect("/healthcenter/student")                                      # compounder view ends
 
@@ -323,10 +324,10 @@ def student_view(request):
             notifs = request.user.notifications.all()
             users = ExtraInfo.objects.all()
             user_id = ExtraInfo.objects.select_related('user','department').get(user=request.user)
-            hospitals = Hospital_admit.objects.select_related('user_id','user_id__user','user_id__department','doctor_id').filter(user_id=user_id).order_by('-admission_date')
-            appointments = Appointment.objects.select_related('user_id','user_id__user','user_id__department','doctor_id','schedule','schedule__doctor_id').filter(user_id=user_id).order_by('-date')
-            ambulances = Ambulance_request.objects.select_related('user_id','user_id__user','user_id__department').filter(user_id=user_id).order_by('-date_request')
-            announcements_data=Announcements.objects.all().values()
+            # hospitals = Hospital_admit.objects.select_related('user_id','user_id__user','user_id__department','doctor_id').filter(user_id=user_id).order_by('-admission_date')
+            # appointments = Appointment.objects.select_related('user_id','user_id__user','user_id__department','doctor_id','schedule','schedule__doctor_id').filter(user_id=user_id).order_by('-date')
+            # ambulances = Ambulance_request.objects.select_related('user_id','user_id__user','user_id__department').filter(user_id=user_id).order_by('-date_request')
+            announcements_data=Announcements.objects.all().order_by('-id').values()
             medical_profile=MedicalProfile.objects.filter(user_id=request.user.username)
             usrnm = get_object_or_404(User, username=request.user.username)
             user_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
@@ -343,8 +344,8 @@ def student_view(request):
                     
                 mp.append(dic)
                 
-            medicines = Prescribed_medicine.objects.select_related('prescription_id','prescription_id__user_id','prescription_id__user_id__user','prescription_id__user_id__department','prescription_id__doctor_id','medicine_id').all()
-            complaints = Complaint.objects.select_related('user_id','user_id__user','user_id__department').filter(user_id=user_id).order_by('-date')
+            # medicines = Prescribed_medicine.objects.select_related('prescription_id','prescription_id__user_id','prescription_id__user_id__user','prescription_id__user_id__department','prescription_id__doctor_id','medicine_id').all()
+            # complaints = Complaint.objects.select_related('user_id','user_id__user','user_id__department').filter(user_id=user_id).order_by('-date')
             days = Constants.DAYS_OF_WEEK
             schedule=Doctors_Schedule.objects.select_related('doctor_id').all().order_by('doctor_id')
             schedule1=Pathologist_Schedule.objects.select_related('pathologist_id').all().order_by('pathologist_id')
@@ -352,29 +353,29 @@ def student_view(request):
             pathologists=Pathologist.objects.filter(active=True)
             
             #prescription
-            prescription= Prescription.objects.filter(user_id=request.user.username)
-            report=[]
-            for pre in prescription:
-                dic={}
-                dic['id']=pre.id
-                dic['doctor_id'] = pre.doctor_id  # Use dot notation
-                dic['date'] = pre.date  # Use dot notation
-                dic['details'] = pre.details  # Use dot notation
-                dic['test'] = pre.test  # Use dot notation
-                if pre.file_id:
-                    dic['file'] = view_file(file_id=pre.file_id)['upload_file']
-                else:
-                    dic['file']=None 
+            # prescription= Prescription.objects.filter(user_id=request.user.username)
+            # report=[]
+            # for pre in prescription:
+            #     dic={}
+            #     dic['id']=pre.id
+            #     dic['doctor_id'] = pre.doctor_id  # Use dot notation
+            #     dic['date'] = pre.date  # Use dot notation
+            #     dic['details'] = pre.details  # Use dot notation
+            #     dic['test'] = pre.test  # Use dot notation
+            #     if pre.file_id:
+            #         dic['file'] = view_file(file_id=pre.file_id)['upload_file']
+            #     else:
+            #         dic['file']=None 
                 
                 
-                report.append(dic)
+            #     report.append(dic)
             
-            count=Counter.objects.all()
+            # count=Counter.objects.all()
 
-            if count:
-                Counter.objects.all().delete()
-            Counter.objects.create(count=0,fine=0)
-            count=Counter.objects.get()
+            # if count:
+            #     Counter.objects.all().delete()
+            # Counter.objects.create(count=0,fine=0)
+            # count=Counter.objects.get()
 
             designations = Designation.objects.filter()
             holdsDesignations = []
@@ -404,30 +405,38 @@ def student_view(request):
           
             uploader_inbox=view_inbox(username=request.user.username,designation=request.session['currentDesignationSelected'],src_module='health_center')
             medicalRelief=[]
+            page_size =2
+            current_page = 1
+            page_size_prescription = page_size  # Default to 2 if not specified
+            offset = (current_page - 1) * page_size_prescription
+            prescriptions = All_Prescription.objects.filter(user_id__iexact = request.user.extrainfo.id).order_by('-date', '-id')[offset:offset + page_size_prescription]
            
-            for out in uploader_outbox:
-                dic={}
+            # for out in uploader_outbox:
+            #     dic={}
             
-                for mr in medicalrelief:
-                    if mr.file_id==int(out['id']):   
-                        dic['id']=out['id']                    
-                        dic['upload_date']=datetime.fromisoformat(out['upload_date']).date()                   
-                        dic['desc']=mr.description
-                        dic['file']=view_file(file_id=out['id'])['upload_file']
-                        dic['status']=mr.acc_admin_forward_flag
-                        dic['approval_date']=''
+            #     for mr in medicalrelief:
+            #         if mr.file_id==int(out['id']):   
+            #             dic['id']=out['id']                    
+            #             dic['upload_date']=datetime.fromisoformat(out['upload_date']).date()                   
+            #             dic['desc']=mr.description
+            #             dic['file']=view_file(file_id=out['id'])['upload_file']
+            #             dic['status']=mr.acc_admin_forward_flag
+            #             dic['approval_date']=''
             
-                for inb in uploader_inbox:
-                    if dic['id']==inb['id']:
-                        dic['approval_date']=datetime.fromisoformat(inb['upload_date']).date()
-                medicalRelief.append(dic)                               
+            #     for inb in uploader_inbox:
+            #         if dic['id']==inb['id']:
+            #             dic['approval_date']=datetime.fromisoformat(inb['upload_date']).date()
+            #     medicalRelief.append(dic)                               
     
             
+            # return render(request, 'phcModule/phc_student.html',
+            #               {'complaints': complaints, 'medicines': medicines,
+            #                'ambulances': ambulances, 'doctors': doctors, 'pathologists':pathologists, 'days': days,'count':count,
+            #                'hospitals': hospitals, 'appointments': appointments,
+            #                'prescription': report, 'schedule': schedule,  'schedule1': schedule1,'users': users, 'curr_date': datetime.now().date(),'holdsDesignations':holdsDesignations,'acc_admin_inbox':acc_ib,'medicalRelief':medicalRelief,'announcements':announcements_data,'medical_profile':mp})
             return render(request, 'phcModule/phc_student.html',
-                          {'complaints': complaints, 'medicines': medicines,
-                           'ambulances': ambulances, 'doctors': doctors, 'pathologists':pathologists, 'days': days,'count':count,
-                           'hospitals': hospitals, 'appointments': appointments,
-                           'prescription': report, 'schedule': schedule,  'schedule1': schedule1,'users': users, 'curr_date': datetime.now().date(),'holdsDesignations':holdsDesignations,'acc_admin_inbox':acc_ib,'medicalRelief':medicalRelief,'announcements':announcements_data,'medical_profile':mp})
+                          {'doctors': doctors, 'pathologists':pathologists, 'days': days,'prescription':prescriptions,
+                           'schedule': schedule,  'schedule1': schedule1,'users': users, 'curr_date': datetime.now().date(),'holdsDesignations':holdsDesignations,'acc_admin_inbox':acc_ib,'medicalRelief':medicalRelief,'medical_profile':mp,'announcements':announcements_data,})
     else:
         return HttpResponseRedirect("/healthcenter/compounder")                                     # student view ends
 
@@ -805,3 +814,15 @@ def view_file(request,file_id):
     response['Content-Disposition'] = 'inline; filename="generated.pdf"'
 
     return response
+
+@login_required
+def student_view_prescription(request,prescription_id):
+    prescription = All_Prescription.objects.get(id=prescription_id)
+    pre_medicine = All_Prescribed_medicine.objects.filter(prescription_id=prescription)
+    doctors=Doctor.objects.filter(active=True).order_by('id')
+    follow_presc =Prescription_followup.objects.filter(prescription_id=prescription).order_by('-id')
+    if request.method == "POST":
+        print("post")
+    return render(request, 'phcModule/phc_student_view_prescription.html',{'prescription':prescription,
+                            'pre_medicine':pre_medicine,'doctors':doctors,
+                            "follow_presc":follow_presc})
