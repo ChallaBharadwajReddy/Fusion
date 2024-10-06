@@ -12,7 +12,7 @@ from notification.views import  healthcare_center_notif
 from .models import ( Doctor, Stock_entry,Present_Stock,All_Medicine, 
                      Doctors_Schedule,Pathologist_Schedule,
                     Pathologist, medical_relief, MedicalProfile,All_Prescription,All_Prescribed_medicine,
-                    Prescription_followup,files,Required_medicine)
+                    Prescription_followup,files,Required_medicine,Announcements)
 from applications.filetracking.sdk.methods import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
@@ -861,7 +861,9 @@ def compounder_view_handler(request):
         formObject. upload_announcement = request.FILES.get('upload_announcement')       
         formObject.ann_date = date.today()     
         formObject.save()
-        healthcare_center_notif(usrnm, recipients , 'new_announce',formObject.message ) 
+        print("before")
+        healthcare_center_notif(usrnm, recipients , 'new_announce',formObject.message )
+        print("after")
         data = {'status': 1}
         return JsonResponse(data)
     elif 'datatype' in request.POST and request.POST['datatype'] == 'patientlog':
