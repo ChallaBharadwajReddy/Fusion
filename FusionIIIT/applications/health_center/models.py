@@ -170,6 +170,7 @@ class medical_relief(models.Model):
     file_id=models.IntegerField(default=0)
     compounder_forward_flag = models.BooleanField(default=False)
     acc_admin_forward_flag = models.BooleanField(default=False)
+    compounder_reject_flag = models.BooleanField(default=False)
     
     
 class MedicalProfile(models.Model):

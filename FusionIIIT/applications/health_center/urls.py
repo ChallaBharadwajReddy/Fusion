@@ -18,7 +18,7 @@ urlpatterns = [
     url(r'announcement/', announcement, name='announcement'),
     url(r'medical_profile/', medical_profile, name='medical_profile'),
     url(r'^student/view_prescription/(?P<prescription_id>[0-9]+)/$',student_view_prescription,name='student_view_prescription'),
-    url(r'^compounder/view_relief/$',compounder_view_relief,name='view_relief'),
+    url(r'^compounder/view_relief/(?P<relief_id>[0-9]+)$',compounder_view_relief,name='view_relief'),
     
     #database entry
     url(r'^schedule_entry', schedule_entry, name='schedule_entry'),

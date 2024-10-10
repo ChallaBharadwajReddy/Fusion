@@ -281,6 +281,7 @@ def compounder_view(request):
                         # dic['file']=view_file(file_id=ib['id'])['upload_file']
                         dic['status']=mr.compounder_forward_flag
                         dic['status1']=mr.acc_admin_forward_flag
+                        dic['status2']=mr.compounder_reject_flag
                 inbox.append(dic)
                        
             # print(inbox_files)
@@ -841,5 +842,28 @@ def student_view_prescription(request,prescription_id):
                             "follow_presc":follow_presc})
 
 @login_required
-def compounder_view_relief(request):
-    return render(request,'phcModule/phc_compounder_view_relief.html')
+def compounder_view_relief(request,relief_id):
+    inbox_files=view_inbox(username=request.user.username,designation='Compounder',src_module='health_center')
+    medicalrelief=medical_relief.objects.all()
+                 
+    inbox=[]
+    for ib in inbox_files:
+        if int(ib['id']) == int(relief_id) :
+            dic={}
+            for mr in medicalrelief:
+                if mr.file_id==int(ib['id']):   
+                    dic['id']=ib['id'] 
+                    dic['uploader']=ib['uploader']                   
+                    dic['upload_date']=datetime.fromisoformat(ib['upload_date']).date()                   
+                    dic['desc']=mr.description
+                    # dic['file']=view_file(file_id=ib['id'])['upload_file']
+                    status = "Pending"
+                    if mr.acc_admin_forward_flag :
+                        status = "Approved"
+                    elif mr.compounder_forward_flag :
+                        status = "Forwarded"
+                    elif mr.compounder_reject_flag :
+                        status = "Rejected"
+                    dic['status']=status
+                inbox.append(dic)
+    return render(request,'phcModule/phc_compounder_view_relief.html',{'inbox':inbox[0],})
