@@ -1280,3 +1280,78 @@ def student_view_handler(request):
         MedicalProfile.objects.select_related('user_id','user_id__user','user_id__department', 'date_of_birth', 'gender', 'blood_type', 'height', 'weight').filter(pk=user_id).delete()
         data = {'status': 1}
         return JsonResponse({'status':1})
+    elif 'datatype' in request.POST and request.POST['datatype'] == 'patientlog':
+                 search = request.POST.get('search_patientlog')
+                 print("patient")
+                 page_size = 2
+                 new_current_page = int(request.POST.get('page'))
+                 new_offset = (new_current_page - 1) * page_size
+                 new_report = []
+                 new_prescriptions = All_Prescription.objects.filter(Q(user_id__iexact = request.user.extrainfo.id) & Q( Q(user_id__icontains = search) | Q(details__icontains = search) | (Q(dependent_name__icontains = search)))).order_by('-date', '-id')[new_offset:new_offset + page_size]
+                 total_count = All_Prescription.objects.filter(Q(user_id__iexact = request.user.extrainfo.id) & Q( Q(user_id__icontains = search) | Q(details__icontains = search) | (Q(dependent_name__icontains = search)))).count()
+                 total_pages = (total_count + page_size - 1) // page_size
+                 for pre in new_prescriptions:
+                      doc = None
+                      if pre.doctor_id != None : doc=pre.doctor_id.doctor_name 
+                      dic = {
+                          'id': pre.pk,
+                          'user_id': pre.user_id,
+                          'date': pre.date,
+                          'doctor_id':doc,
+                          'details': pre.details,
+                          'test': pre.test,
+                          'file_id': pre.file_id,
+                          'dependent_name':pre.dependent_name
+                          # 'file': view_file(file_id=pre.file_id)['upload_file'] if pre.file_id else None
+                      }
+                      new_report.append(dic)
+                 return JsonResponse({
+                         'report': new_report,
+                         'page': new_current_page,
+                         'total_pages': total_pages,
+                         'has_previous': new_current_page > 1,
+                         'has_next': new_current_page < total_pages,
+                         'previous_page_number': new_current_page - 1 if new_current_page > 1 else None,
+                         'next_page_number': new_current_page + 1 if new_current_page < total_pages else None,
+                         })
+    elif 'search_patientlog' in request.POST:
+        search = request.POST.get('search_patientlog')
+        current_page = 1
+        page_size_prescription = 2  # Default to 2 if not specified
+        offset = (current_page - 1) * page_size_prescription
+        prescriptions = All_Prescription.objects.filter(Q(user_id__iexact = request.user.extrainfo.id) & Q( Q(user_id__icontains = search) | Q(details__icontains = search) | (Q(dependent_name__icontains = search)))).order_by('-date', '-id')[offset:offset + page_size_prescription]
+            
+        report = []
+        for pre in prescriptions:
+            doc = None
+            if pre.doctor_id != None : doc=pre.doctor_id.doctor_name
+            dic = {
+                'id': pre.pk,
+                'user_id': pre.user_id,
+                'doctor_id': doc,
+                'date': pre.date,
+                'details': pre.details,
+                'test': pre.test,
+                'file_id': pre.file_id,
+                'dependent_name':pre.dependent_name
+                    # 'file': view_file(file_id=pre.file_id)['upload_file'] if pre.file_id else None
+                }
+            report.append(dic)
+        print(report)
+            # Handle total count for pagination context
+        total_count = All_Prescription.objects.filter(Q(user_id__iexact = request.user.extrainfo.id) & Q( Q(user_id__icontains = search) | Q(details__icontains = search) | (Q(dependent_name__icontains = search)))).count()
+        print(total_count)
+            # Calculate total number of pages
+        total_pages = (total_count + page_size_prescription - 1) // page_size_prescription  # This ensures rounding up
+        prescContext = {
+            'count': total_pages,
+            'page': {
+                'object_list': report,
+                'number': current_page,
+                'has_previous': current_page > 1,
+                'has_next': current_page < total_pages,
+                'previous_page_number': current_page - 1 if current_page > 1 else None,
+                'next_page_number': current_page + 1 if current_page < total_pages else None,
+            }
+        }
+        return JsonResponse({'status':1,"presc_context":prescContext})

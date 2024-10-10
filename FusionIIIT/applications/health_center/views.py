@@ -410,7 +410,20 @@ def student_view(request):
             page_size_prescription = page_size  # Default to 2 if not specified
             offset = (current_page - 1) * page_size_prescription
             prescriptions = All_Prescription.objects.filter(user_id__iexact = request.user.extrainfo.id).order_by('-date', '-id')[offset:offset + page_size_prescription]
-           
+            total_count = All_Prescription.objects.filter(user_id__iexact = request.user.extrainfo.id).count()
+            # Calculate total number of pages
+            total_pages = (total_count + page_size_prescription - 1) // page_size_prescription  # This ensures rounding up
+            prescContext = {
+                'count': total_pages,
+                'page': {
+                    'object_list': prescriptions,
+                    'number': current_page,
+                    'has_previous': current_page > 1,
+                    'has_next': current_page < total_pages,
+                    'previous_page_number': current_page - 1 if current_page > 1 else None,
+                    'next_page_number': current_page + 1 if current_page < total_pages else None,
+                }
+            }
             # for out in uploader_outbox:
             #     dic={}
             
@@ -436,7 +449,7 @@ def student_view(request):
             #                'prescription': report, 'schedule': schedule,  'schedule1': schedule1,'users': users, 'curr_date': datetime.now().date(),'holdsDesignations':holdsDesignations,'acc_admin_inbox':acc_ib,'medicalRelief':medicalRelief,'announcements':announcements_data,'medical_profile':mp})
             return render(request, 'phcModule/phc_student.html',
                           {'doctors': doctors, 'pathologists':pathologists, 'days': days,'prescription':prescriptions,
-                           'schedule': schedule,  'schedule1': schedule1,'users': users, 'curr_date': datetime.now().date(),'holdsDesignations':holdsDesignations,'acc_admin_inbox':acc_ib,'medicalRelief':medicalRelief,'medical_profile':mp,'announcements':announcements_data,})
+                           'schedule': schedule,  'schedule1': schedule1,'users': users, 'curr_date': datetime.now().date(),'presc_hist': prescContext,'holdsDesignations':holdsDesignations,'acc_admin_inbox':acc_ib,'medicalRelief':medicalRelief,'medical_profile':mp,'announcements':announcements_data,})
     else:
         return HttpResponseRedirect("/healthcenter/compounder")                                     # student view ends
 
@@ -826,3 +839,7 @@ def student_view_prescription(request,prescription_id):
     return render(request, 'phcModule/phc_student_view_prescription.html',{'prescription':prescription,
                             'pre_medicine':pre_medicine,'doctors':doctors,
                             "follow_presc":follow_presc})
+
+@login_required
+def compounder_view_relief(request):
+    return render(request,'phcModule/phc_compounder_view_relief.html')

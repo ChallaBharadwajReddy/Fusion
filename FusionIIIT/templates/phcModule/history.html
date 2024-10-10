@@ -22,6 +22,13 @@
 
     <div class="ui active tab" data-tab="prescriptionhistory">
         <div id="presc_print" class="ui vertical segment" >
+            <form class="ui form" style="margin-bottom: 20px;" id="search_patientlog">
+                <div class="field">
+                    <div class="ui fluid large input">
+                        <input placeholder="search" id="patient_search" name="patient_search" type="text">
+                    </div>
+                 </div>
+            </form>
             <table  border=1 class="ui very basic collapsing celled large sortable table"
                   style="padding-left: 2.5%;padding-right: 2.5%;margin: auto;" >
                 <thead>
@@ -37,13 +44,16 @@
                         Details
                     </td>
                     <td style="font-weight:bold;color:black;">
+                        Dependent
+                    </td>
+                    <td style="font-weight:bold;color:black;">
                         View
                     </td>
 
                 </tr>
                 </thead>
 
-                <tbody>
+                <tbody id="prescriptions-list">
                 {% for pre in prescription %}
                 <tr>
 
@@ -64,6 +74,9 @@
                         {{pre.details}}
                     </td>
                     <td>
+                        {{pre.dependent_name}}
+                    </td>
+                    <td>
                         <button class="view-followup-btn"><a style="color: white;" href="{% url 'healthcenter:student_view_prescription' prescription_id=pre.id %}">View/Follow-up</a></button>
                     </td>
                 </tr>
@@ -71,8 +84,14 @@
                 {% endfor %}
                 </tbody>
             </table>
-
-          </div>
+        </div>
+        <div class="pagination" style="display: flex; justify-content: center;align-items: center;gap: 15px;margin-top: 15px;">
+            <button id="previous-page" data-page="{{ presc_hist.page.previous_page_number }}" class="ui small muted button">Previous</button>
+            <div>
+                Page <input type="number" value="{{ presc_hist.page.number }}" id="log_page_number" style="width: 40px;"> of <span id="log_total_pages">{{ presc_hist.count}}</span>
+            </div>
+            <button id="next-page" data-page="{{ presc_hist.page.next_page_number }}" class="ui small muted button">Next</button>
+        </div>
         </div>
 {% comment %} 
     <div class="ui tab" data-tab="ambulancehistory">
@@ -190,6 +209,106 @@
 
             
       }
+
+      $('#search_patientlog').on('submit',function(e){
+                e.preventDefault();
+                alert('changed search')
+                $.ajax({
+                    type: "post",
+                    url: "/healthcenter/student/",
+                    data: {
+                        csrfmiddlewaretoken: "{{ csrf_token }}",
+                        search_patientlog: $("#patient_search").val(),
+                    },
+                    success: function(data){
+                        console.log(data)
+                        $('#prescriptions-list').empty();
+                        const view_button_prescription = `<td><button class="view-followup-btn"><a style="color: white;" href='{% url 'healthcenter:view_prescription' prescription_id=0 %}'>View/Follow-up</a></button></td>` 
+                        $.each( data.presc_context.page.object_list , function(index, prescription) {
+                                console.log("inside",$('#prescriptions-list'))
+                                 $('#prescriptions-list').append(
+                                    '<tr>' +
+                                     '<td style="white-space:nowrap;"><h4 class="ui image header"><img src="{% static "globals/img/zlatan.jpg" %}" class="ui mini circular image"></h4>' + prescription.doctor_id + '</td>' +
+                                     '<td style="white-space:nowrap;">' + prescription.date + '</td>' +
+                                     '<td>' + prescription.details + '</td>' +'<td>' + prescription.dependent_name + '</td>' +
+                                     view_button_prescription.replace('0',prescription.id) + // Add any file handling logic here
+                                    '</tr>'
+                                 );
+                             });
+                             if (data.presc_context.page.has_previous) {
+                                 $('#previous-page').data('page', data.presc_context.page.previous_page_number).show();
+                             } else {
+                                 $('#previous-page').hide();
+                             }
+         
+                             if (data.presc_context.page.has_next) {
+                                 $('#next-page').data('page', data.presc_context.page.next_page_number).show();
+                             } else {
+                                 $('#next-page').hide();
+                             }
+                             document.getElementById('log_page_number').value=data.presc_context.page.number
+                             document.getElementById('log_total_pages').innerHTML=data.presc_context.count
+                        
+                    }
+                })
+            })
+      function loadPage(pageNumber) {
+                     $.ajax({
+                         url: '/healthcenter/student/',
+                         type: 'POST',
+                         data: {
+                         csrfmiddlewaretoken: '{{ csrf_token }}',
+                         page: pageNumber,
+                         search_patientlog: $("#patient_search").val(),
+                         datatype: 'patientlog'
+                         },
+                         success: function(data) {
+                             $('#prescriptions-list').empty();
+                             const view_button_prescription = `<td><button class="view-followup-btn"><a style="color: white;" href='{% url 'healthcenter:view_prescription' prescription_id=0 %}'>View/Follow-up</a></button></td>` 
+                             $.each(data.report, function(index, prescription) {
+                                console.log("inside",$('#prescriptions-list'))
+                                 $('#prescriptions-list').append(
+                                     '<tr>' +
+                                     '<td style="white-space:nowrap;"><h4 class="ui image header"><img src="{% static "globals/img/zlatan.jpg" %}" class="ui mini circular image"></h4>' + prescription.doctor_id + '</td>' +
+                                     '<td style="white-space:nowrap;">' + prescription.date + '</td>' +
+                                     '<td>' + prescription.details + '</td>' +'<td>' + prescription.dependent_name + '</td>' +
+                                     view_button_prescription.replace('0',prescription.id) + // Add any file handling logic here
+                                    '</tr>'
+                                 );
+                             });
+                             
+                             if (data.has_previous) {
+                                 $('#previous-page').data('page', data.previous_page_number).show();
+                             }
+         
+                             if (data.has_next) {
+                                 $('#next-page').data('page', data.next_page_number).show();
+                             }
+                            
+                             document.getElementById('log_page_number').value=data.page
+                             document.getElementById('log_total_pages').innerHTML=data.total_pages
+                         }
+                     });
+                 }
+         
+                 $('#previous-page').click(function() {
+                    const pageNumber = $(this).data('page');
+                     loadPage(pageNumber);
+                 });
+         
+                 $('#next-page').click(function() {
+                    const pageNumber = $(this).data('page');
+                     loadPage(pageNumber);
+                     
+                 });
+                 $('#log_page_number').change(function(){
+                    if( document.getElementById('log_page_number').value<=0 || document.getElementById('log_page_number').value > document.getElementById('log_total_pages').innerHTML){
+                        alert("enter valid page number")
+                    }
+                    else{
+                        loadPage(document.getElementById('log_page_number').value);
+                    }
+                 })
       </script>
 {% comment %} 
     <div class="ui tab" data-tab="hospitalhistory">
