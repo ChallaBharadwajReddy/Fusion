@@ -847,6 +847,17 @@ def compounder_view_handler(request):
         healthcare_center_notif(request.user,user.user,'rel_approve','')      
         data = {'status': 1}
         return JsonResponse(data)
+    elif 'compounder_reject' in request.POST:
+        file_id = request.POST.get('file_id')
+        relief = medical_relief.objects.get(file_id=file_id)
+        relief.compounder_reject_flag = True
+        relief.save()
+        rejected_user = request.POST.get('rejected_user')
+        user=User.objects.get(username__iexact = rejected_user)
+        rejected_user_info = ExtraInfo.objects.get(user_id = user)
+        healthcare_center_notif(request.user,rejected_user_info.user,'reject_relief','')
+        data = {'status': 1}
+        return JsonResponse(data)
     elif 'comp_announce' in request.POST:
         usrnm = get_object_or_404(User, username=request.user.username)
         user_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
