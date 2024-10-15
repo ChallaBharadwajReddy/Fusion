@@ -2,6 +2,7 @@
 from django.db import models
 from datetime import date
 from django.contrib.auth.models import User
+import datetime
 
 from applications.globals.models import ExtraInfo
 from applications.hr2.models import EmpDependents
@@ -51,7 +52,7 @@ class Pathologist(models.Model):
     
 class Announcements(models.Model):
     anno_id = models.ForeignKey(ExtraInfo, on_delete=models.CASCADE, related_name='announcements_made')
-    ann_date = models.DateTimeField(default="04-04-2021")
+    ann_date = models.DateTimeField(default=datetime.date.today)
     message = models.CharField(max_length=200)   
     upload_announcement = models.FileField(upload_to='health_center/upload_announcement', null=True, default=" ")
     def __str__(self):
