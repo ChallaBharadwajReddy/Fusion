@@ -17,7 +17,7 @@ from notification.views import  healthcare_center_notif
 from .models import ( Constants,All_Medicine,All_Prescribed_medicine,All_Prescription,Prescription_followup,
                     Present_Stock,Doctor,Pathologist,
                     Doctors_Schedule,Pathologist_Schedule,Stock_entry,
-                    medical_relief,MedicalProfile,Required_medicine,files,Required_tabel_last_updated,Announcements)
+                    medical_relief,MedicalProfile,Required_medicine,files,Required_tabel_last_updated,Announcements,Complaint)
 from .utils import datetime_handler, compounder_view_handler, student_view_handler
 from applications.filetracking.sdk.methods import *
 from django.db.models import Q
@@ -78,7 +78,7 @@ def compounder_view(request):
 
         else:
             notifs = request.user.notifications.all()           
-            # all_complaints = Complaint.objects.select_related('user_id','user_id__user','user_id__department').all()
+            all_complaints = Complaint.objects.select_related('user_id','user_id__user','user_id__department').all()
             # all_hospitals = Hospital_admit.objects.select_related('user_id','user_id__user','user_id__department','doctor_id').all().order_by('-admission_date')
             # hospitals_list = Hospital.objects.all().order_by('hospital_name')
             # all_ambulances = Ambulance_request.objects.select_related('user_id','user_id__user','user_id__department').all().order_by('-date_request')
@@ -288,7 +288,7 @@ def compounder_view(request):
                       
             return render(request, 'phcModule/phc_compounder.html',
                           {'days': days, 'users': users,'expired':ExpiredstockContext,
-                           'stocks': stocks,
+                           'stocks': stocks,"all_complaints":all_complaints,
                             'doctors': doctors, 'pathologists':pathologists, 
                         'schedule': schedule, 'schedule1': schedule1, 'live_meds': stockContext, 'presc_hist': prescContext,'inbox_files':inbox,'medicines_presc':medicine_presc,'announcements':announcements_data,})
     else:
@@ -487,15 +487,15 @@ def schedule_entry(request):
             to_time=time(y//3600,(y%3600)//60,y%60)
             print(to_time)
             room=int(z.cell(i,4).value)
-            u = Schedule.objects.create(
-                        doctor_id = doc_id,
-                        day = da,
-                        from_time=from_time,
-                        to_time=to_time,
-                        room=room,
-                        date=datetime.now()
-            )
-            print("Schedule done -> ")
+            # u = Schedule.objects.create(
+            #             doctor_id = doc_id,
+            #             day = da,
+            #             from_time=from_time,
+            #             to_time=to_time,
+            #             room=room,
+            #             date=datetime.now()
+            # )
+            # print("Schedule done -> ")
         except Exception as e:
             print(e)
             print(i)
@@ -670,65 +670,65 @@ def browse_announcements():
 
     return context
 
-def get_to_request(username):
-    """
-    This function is used to get requests for the receiver
+# def get_to_request(username):
+#     """
+#     This function is used to get requests for the receiver
 
-    @variables:
-        req - Contains request queryset
+#     @variables:
+#         req - Contains request queryset
 
-    """
-    req = SpecialRequest.objects.filter(request_receiver=username)
-    return req
+#     """
+#     # req = SpecialRequest.objects.filter(request_receiver=username)
+#     return req
 
 
 
-@login_required(login_url='/accounts/login')
-def announcement(request):
-    """
-    This function is contains data for Requests and Announcement Related methods.
-    Data is added to Announcement Table using this function.
+# @login_required(login_url='/accounts/login')
+# def announcement(request):
+#     """
+#     This function is contains data for Requests and Announcement Related methods.
+#     Data is added to Announcement Table using this function.
 
-    @param:
-        request - contains metadata about the requested page
+#     @param:
+#         request - contains metadata about the requested page
 
-    @variables:
-        usrnm, user_info, ann_anno_id - Stores data needed for maker
-        batch, programme, message, upload_announcement,
-        department, ann_date, user_info - Gets and store data from FORM used for Announcements for Students.
+#     @variables:
+#         usrnm, user_info, ann_anno_id - Stores data needed for maker
+#         batch, programme, message, upload_announcement,
+#         department, ann_date, user_info - Gets and store data from FORM used for Announcements for Students.
 
-    """
-    usrnm = get_object_or_404(User, username=request.user.username)
-    user_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
-    num = 1
-    ann_anno_id = user_info.id
-    requests_received = get_to_request(usrnm)
+#     """
+#     usrnm = get_object_or_404(User, username=request.user.username)
+#     user_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
+#     num = 1
+#     ann_anno_id = user_info.id
+#     requests_received = get_to_request(usrnm)
 
-    if request.method == 'POST':
-        formObject = Announcements()
-        # formObject.key = Projects.objects.get(id=request.session['projectId'])
-        user_info = ExtraInfo.objects.all().select_related('user','department').get(id=ann_anno_id)
-        getstudents = ExtraInfo.objects.select_related('user')
-        recipients = User.objects.filter(extrainfo__in=getstudents)
-        # formObject.anno_id=1
-        formObject.anno_id=user_info
-        # formObject.batch = request.POST['batch']
-        # formObject.programme = request.POST['programme']
-        formObject.message = request.POST['announcement']
-        formObject. upload_announcement = request.FILES.get('upload_announcement')
-        # formObject.department = request.POST['department']
-        formObject.ann_date = date.today()
-        #formObject.amount = request.POST['amount']
-        formObject.save()
-        healthcare_center_notif(usrnm, recipients , 'new_announce',formObject.message ) 
-        return redirect('../../compounder/')    
+#     if request.method == 'POST':
+#         formObject = Announcements()
+#         # formObject.key = Projects.objects.get(id=request.session['projectId'])
+#         user_info = ExtraInfo.objects.all().select_related('user','department').get(id=ann_anno_id)
+#         getstudents = ExtraInfo.objects.select_related('user')
+#         recipients = User.objects.filter(extrainfo__in=getstudents)
+#         # formObject.anno_id=1
+#         formObject.anno_id=user_info
+#         # formObject.batch = request.POST['batch']
+#         # formObject.programme = request.POST['programme']
+#         formObject.message = request.POST['announcement']
+#         formObject. upload_announcement = request.FILES.get('upload_announcement')
+#         # formObject.department = request.POST['department']
+#         formObject.ann_date = date.today()
+#         #formObject.amount = request.POST['amount']
+#         formObject.save()
+#         healthcare_center_notif(usrnm, recipients , 'new_announce',formObject.message ) 
+#         return redirect('../../compounder/')    
         
-    announcements_data=Announcements.objects.all().values()
+#     announcements_data=Announcements.objects.all().values()
     
-    return render(request, 'health_center/make_announce_comp.html', {"user_designation":user_info.user_type,
-                                                            'announcements':announcements_data,
-                                                            "request_to":requests_received
-                                                        })  
+#     return render(request, 'health_center/make_announce_comp.html', {"user_designation":user_info.user_type,
+#                                                             'announcements':announcements_data,
+#                                                             "request_to":requests_received
+#                                                         })  
         # batch = request.POST.get('batch', '')
         # programme = request.POST.get('programme', '')
         # message = request.POST.get('announcement', '')
@@ -747,54 +747,54 @@ def announcement(request):
         #                             department = department,
         #                             ann_date=ann_date)
      
-@login_required(login_url='/accounts/login')      
-def medical_profile(request): 
-    usrnm = get_object_or_404(User, username=request.user.username)
-    user_id_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
-    num = 1
-    user_id = user_id_info.id
-    requests_received = get_to_request(usrnm)
-    user = request.user
-    # medical_profile, created = MedicalProfile.objects.get_or_create(user_id==request.user.username)
-    medical_profile=MedicalProfile.objects.filter(user_id=request.user.username)
-    usrnm = get_object_or_404(User, username=request.user.username)
-    user_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
-    # mp=[]/
-    cnt=0
-    for mr in medical_profile:                   
-        cnt += 1
-    if request.method == 'POST':
-        user_info = ExtraInfo.objects.all().select_related('user','department').get(id=user_id)
+# @login_required(login_url='/accounts/login')      
+# def medical_profile(request): 
+#     usrnm = get_object_or_404(User, username=request.user.username)
+#     user_id_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
+#     num = 1
+#     user_id = user_id_info.id
+#     # requests_received = get_to_request(usrnm)
+#     user = request.user
+#     # medical_profile, created = MedicalProfile.objects.get_or_create(user_id==request.user.username)
+#     medical_profile=MedicalProfile.objects.filter(user_id=request.user.username)
+#     usrnm = get_object_or_404(User, username=request.user.username)
+#     user_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
+#     # mp=[]/
+#     cnt=0
+#     for mr in medical_profile:                   
+#         cnt += 1
+#     if request.method == 'POST':
+#         user_info = ExtraInfo.objects.all().select_related('user','department').get(id=user_id)
    
-        if cnt==0:
-            medical_profile = MedicalProfile()
-            medical_profile.user_id = user_info
-            medical_profile.date_of_birth = request.POST.get('date_of_birth')
-            medical_profile.gender = request.POST.get('gender')
-            medical_profile.blood_type = request.POST.get('blood_type')
-            medical_profile.height = request.POST.get('height')
-            medical_profile.weight = request.POST.get('weight')
-            # medical_profile.form_submitted = True
-            medical_profile.save()
-            return redirect('../../compounder/')    
+#         if cnt==0:
+#             medical_profile = MedicalProfile()
+#             medical_profile.user_id = user_info
+#             medical_profile.date_of_birth = request.POST.get('date_of_birth')
+#             medical_profile.gender = request.POST.get('gender')
+#             medical_profile.blood_type = request.POST.get('blood_type')
+#             medical_profile.height = request.POST.get('height')
+#             medical_profile.weight = request.POST.get('weight')
+#             # medical_profile.form_submitted = True
+#             medical_profile.save()
+#             return redirect('../../compounder/')    
             
-        else:
-            # Process the form submission for the first time
-            medical_profile1=MedicalProfile.objects.filter(user_id=user_info).first()
+#         else:
+#             # Process the form submission for the first time
+#             medical_profile1=MedicalProfile.objects.filter(user_id=user_info).first()
             
-            medical_profile1.date_of_birth = request.POST.get('date_of_birth')
-            medical_profile1.gender = request.POST.get('gender')
-            medical_profile1.blood_type = request.POST.get('blood_type')
-            medical_profile1.height = request.POST.get('height')
-            medical_profile1.weight = request.POST.get('weight')
-            # medical_profile.form_submitted = True
-            medical_profile1.save()
-            return redirect('../../compounder/')    
+#             medical_profile1.date_of_birth = request.POST.get('date_of_birth')
+#             medical_profile1.gender = request.POST.get('gender')
+#             medical_profile1.blood_type = request.POST.get('blood_type')
+#             medical_profile1.height = request.POST.get('height')
+#             medical_profile1.weight = request.POST.get('weight')
+#             # medical_profile.form_submitted = True
+#             medical_profile1.save()
+#             return redirect('../../compounder/')    
             
-    return render(request, 'health_center/medical_profile.html', {"user_designation":user_info.user_type,
-                                                            'medical_profile':medical_profile,
-                                                            "request_to":requests_received
-                                                        })
+#     return render(request, 'health_center/medical_profile.html', {"user_designation":user_info.user_type,
+#                                                             'medical_profile':medical_profile,
+#                                                             "request_to":requests_received
+#                                                         })
 
 @login_required
 def compounder_view_prescription(request,prescription_id):
