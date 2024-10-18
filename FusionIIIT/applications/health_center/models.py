@@ -58,11 +58,11 @@ class Announcements(models.Model):
     def __str__(self):
         return str(self.anno_id.user.username)
 
-# class Complaint(models.Model):
-#     user_id = models.ForeignKey(ExtraInfo,on_delete=models.CASCADE)
-#     feedback = models.CharField(max_length=100, null=True, blank=False)                          #This is the feedback given by the compounder
-#     complaint = models.CharField(max_length=100, null=True, blank=False)                         #Here Complaint given by user cannot be NULL!
-#     date = models.DateField(auto_now=True)
+class Complaint(models.Model):
+    user_id = models.ForeignKey(ExtraInfo,on_delete=models.CASCADE)
+    feedback = models.CharField(max_length=100, null=True, blank=False)                          #This is the feedback given by the compounder
+    complaint = models.CharField(max_length=100, null=True, blank=False)                         #Here Complaint given by user cannot be NULL!
+    date = models.DateField(auto_now=True)
 
 class All_Medicine(models.Model):
     medicine_name = models.CharField(max_length=1000,default="NOT_SET", null=True)
