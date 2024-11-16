@@ -58,14 +58,17 @@ class PathologistScheduleSerializer(serializers.ModelSerializer):
         model=Pathologist_Schedule
         fields=('__all__')
 
-
-        
+class ComplaintSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model=Complaint
+        fields=('__all__')
         
 class AnnouncementSerializer(serializers.ModelSerializer):
     
     class Meta:
         model=Announcements
-        fields=('__all__')
+        fields=['message']
 
 
 # class CounterSerializer(serializers.ModelSerializer):
