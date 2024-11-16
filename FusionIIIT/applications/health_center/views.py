@@ -78,7 +78,7 @@ def compounder_view(request):
 
         else:
             notifs = request.user.notifications.all()           
-            all_complaints = Complaint.objects.select_related('user_id','user_id__user','user_id__department').all()
+            all_complaints = Complaint.objects.select_related('user_id','user_id__user','user_id__department').all().order_by('-id')
             # all_hospitals = Hospital_admit.objects.select_related('user_id','user_id__user','user_id__department','doctor_id').all().order_by('-admission_date')
             # hospitals_list = Hospital.objects.all().order_by('hospital_name')
             # all_ambulances = Ambulance_request.objects.select_related('user_id','user_id__user','user_id__department').all().order_by('-date_request')
