@@ -28,6 +28,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from applications.globals.models import ExtraInfo
 from applications.hr2.models import EmpDependents
+import json
 from . import serializers
 
 from notifications.models import Notification
@@ -36,6 +37,12 @@ User = get_user_model()
     
 @api_view(['POST'])
 def compounder_api_handler(request):
+    print("request")
+    print(request)
+    request_body = request.body.decode('utf-8')
+    request_body = json.loads(request_body)
+    print(type(request_body))
+    print("get_annoucements" in request_body)
     '''
         handles rendering of pages for compounder view
     '''
@@ -95,7 +102,64 @@ def compounder_api_handler(request):
         doc=Pathologist.objects.get(id=doctor).pathologist_name
         data={'status':1, 'id':doctor, 'doc':doc}
         return JsonResponse(data)
-
+    
+    elif "get_annoucements" in request_body:
+        announcements_data=Announcements.objects.all().order_by('-id').values()
+        serializer = serializers.AnnouncementSerializer(announcements_data,many=True)
+        return JsonResponse({'status':1, 'announcements' : serializer.data})
+    
+    elif "get_feedback" in request_body:
+        all_complaints = Complaint.objects.select_related('user_id','user_id__user','user_id__department').all().order_by('-id')
+        serializer = serializers.ComplaintSerializer(all_complaints,many=True)
+        return JsonResponse({'status':1,"complaints":serializer.data})
+    
+    elif "get_relief" in request_body:
+        inbox_files=view_inbox(username=request.user.username,designation='Compounder',src_module='health_center')
+        medicalrelief=medical_relief.objects.all()
+                 
+        inbox=[]
+        for ib in inbox_files:
+            dic={}
+            for mr in medicalrelief:
+                 if mr.file_id==int(ib['id']):   
+                    dic['id']=ib['id'] 
+                    dic['uploader']=ib['uploader']                   
+                    dic['upload_date']=datetime.fromisoformat(ib['upload_date']).date()                   
+                    dic['desc']=mr.description
+                    # dic['file']=view_file(file_id=ib['id'])['upload_file']
+                    dic['status']=mr.compounder_forward_flag
+                    dic['status1']=mr.acc_admin_forward_flag
+                    dic['status2']=mr.compounder_reject_flag
+            inbox.append(dic)
+            
+        return JsonResponse({'status':1, 'relief': inbox})
+    
+    elif 'get_application' in request_body:
+        inbox_files=view_inbox(username=request.user.username,designation='Compounder',src_module='health_center')
+        medicalrelief=medical_relief.objects.all()
+        relief_id = request_body['aid']
+        inbox=[]
+        for ib in inbox_files:
+            if int(ib['id']) == int(relief_id) :
+                dic={}
+                for mr in medicalrelief:
+                    if mr.file_id==int(ib['id']):   
+                        dic['id']=ib['id'] 
+                        dic['uploader']=ib['uploader']                   
+                        dic['upload_date']=datetime.fromisoformat(ib['upload_date']).date()                   
+                        dic['desc']=mr.description
+                        # dic['file']=view_file(file_id=ib['id'])['upload_file']
+                        status = "Pending"
+                        if mr.acc_admin_forward_flag :
+                            status = "Approved"
+                        elif mr.compounder_forward_flag :
+                            status = "Forwarded"
+                        elif mr.compounder_reject_flag :
+                            status = "Rejected"
+                        dic['status']=status
+                    inbox.append(dic)
+        return JsonResponse({status:1,'inbox':inbox[0]})
+        
 
     elif 'add_stock' in request.POST:
         try:
@@ -681,38 +745,38 @@ def compounder_api_handler(request):
             thresh = ""
         data = {'thresh': thresh}
         return JsonResponse(data)
-    elif 'compounder_forward' in request.POST:
+    elif 'compounder_forward' in request_body:
         acc_admin_des_id = Designation.objects.get(name="Accounts Admin")        
         user_ids = HoldsDesignation.objects.filter(designation_id=acc_admin_des_id.id).values_list('user_id', flat=True)    
         acc_admins = ExtraInfo.objects.get(user_id=user_ids[0])
         user=ExtraInfo.objects.get(pk=acc_admins.id)
         forwarded_file_id=forward_file(
-            file_id=request.POST['file_id'],
+            file_id=request_body['file_id'],
             receiver=acc_admins.id, 
             receiver_designation="Accounts Admin",
             file_extra_JSON= {"value": 2},            
-            remarks="Forwarded File with id: "+ str(request.POST['file_id'])+"to Accounts Admin "+str(acc_admins.id), 
+            remarks="Forwarded File with id: "+ str(request_body['file_id'])+"to Accounts Admin "+str(acc_admins.id), 
             file_attachment=None,
         )
        
-        medical_relief_instance = medical_relief.objects.get(file_id=request.POST['file_id'])        
+        medical_relief_instance = medical_relief.objects.get(file_id=request_body['file_id'])        
         medical_relief_instance.compounder_forward_flag = True
         medical_relief_instance.save()        
         healthcare_center_notif(request.user,user.user,'rel_approve','')      
         data = {'status': 1}
         return JsonResponse(data)
-    elif 'compounder_reject' in request.POST:
-        file_id = request.POST.get('file_id')
+    elif 'compounder_reject' in request_body:
+        file_id = request_body['file_id']
         relief = medical_relief.objects.get(file_id=file_id)
         relief.compounder_reject_flag = True
         relief.save()
-        rejected_user = request.POST.get('rejected_user')
+        rejected_user = request_body['rejected_user']
         user=User.objects.get(username__iexact = rejected_user)
         rejected_user_info = ExtraInfo.objects.get(user_id = user)
         healthcare_center_notif(request.user,rejected_user_info.user,'reject_relief','')
         data = {'status': 1}
         return JsonResponse(data)
-    elif 'comp_announce' in request.POST:
+    elif 'comp_announce' in request_body:
         usrnm = get_object_or_404(User, username=request.user.username)
         user_info = ExtraInfo.objects.all().select_related('user','department').filter(user=usrnm).first()
         num = 1
@@ -722,7 +786,7 @@ def compounder_api_handler(request):
         getstudents = ExtraInfo.objects.select_related('user')
         recipients = User.objects.filter(extrainfo__in=getstudents)       
         formObject.anno_id=user_info     
-        formObject.message = request.POST['announcement']
+        formObject.message = request_body['announcement']
         formObject. upload_announcement = request.FILES.get('upload_announcement')       
         formObject.ann_date = date.today()     
         formObject.save()
@@ -970,7 +1034,8 @@ def compounder_api_handler(request):
                 'next_page_number' :  current_required_page + 1 if current_required_page < total_pages_stock_required else None,      
             }
         }
-    return JsonResponse({'status':1,'stocks':stocks})
+        return JsonResponse({'status':1,'stocks':stocks})
+    return JsonResponse({'status':1 , 'name':"bharadwaj"})
 
 @api_view(['POST'])
 def student_api_handler(request):
