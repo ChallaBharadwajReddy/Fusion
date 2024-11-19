@@ -425,22 +425,22 @@ def student_view(request):
                     'next_page_number': current_page + 1 if current_page < total_pages else None,
                 }
             }
-            # for out in uploader_outbox:
-            #     dic={}
+            for out in uploader_outbox:
+                dic={}
             
-            #     for mr in medicalrelief:
-            #         if mr.file_id==int(out['id']):   
-            #             dic['id']=out['id']                    
-            #             dic['upload_date']=datetime.fromisoformat(out['upload_date']).date()                   
-            #             dic['desc']=mr.description
-            #             dic['file']=view_file(file_id=out['id'])['upload_file']
-            #             dic['status']=mr.acc_admin_forward_flag
-            #             dic['approval_date']=''
+                for mr in medicalrelief:
+                    if mr.file_id==int(out['id']):   
+                        dic['id']=out['id']                    
+                        dic['upload_date']=datetime.fromisoformat(out['upload_date']).date()                   
+                        dic['desc']=mr.description
+                        # dic['file']=view_file(file_id=out['id'])['upload_file']       
+                        dic['status']=mr.acc_admin_forward_flag
+                        dic['approval_date']=''
             
-            #     for inb in uploader_inbox:
-            #         if dic['id']==inb['id']:
-            #             dic['approval_date']=datetime.fromisoformat(inb['upload_date']).date()
-            #     medicalRelief.append(dic)                               
+                for inb in uploader_inbox:
+                    if dic['id']==inb['id']:
+                        dic['approval_date']=datetime.fromisoformat(inb['upload_date']).date()
+                medicalRelief.append(dic)                               
     
             
             # return render(request, 'phcModule/phc_student.html',

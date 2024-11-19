@@ -34,15 +34,17 @@ from . import serializers
 from notifications.models import Notification
 
 User = get_user_model()
+
+def convert_to_am_pm(time_str):
+    """Converts time in HH:MM:SS format to AM/PM format."""
+
+    time_obj = datetime.strptime(time_str, "%H:%M:%S")
+    return time_obj.strftime("%I:%M %p")
     
 @api_view(['POST'])
 def compounder_api_handler(request):
-    print("request")
-    print(request)
     request_body = request.body.decode('utf-8')
     request_body = json.loads(request_body)
-    print(type(request_body))
-    print("get_annoucements" in request_body)
     '''
         handles rendering of pages for compounder view
     '''
@@ -58,10 +60,10 @@ def compounder_api_handler(request):
         return JsonResponse(data)
 
     # updating new doctor info in db    
-    elif 'add_doctor' in request.POST:                                         
-        doctor=request.POST.get('new_doctor')
-        specialization=request.POST.get('specialization')
-        phone=request.POST.get('phone')
+    elif 'add_doctor' in request_body:                                         
+        doctor=request_body['new_doctor']
+        specialization=request_body['specialization']
+        phone=request_body['phone']
         Doctor.objects.create(
         doctor_name=doctor,
         doctor_phone=phone,
@@ -72,10 +74,10 @@ def compounder_api_handler(request):
         return JsonResponse(data)
     
     # updating new pathologist info in db    
-    elif 'add_pathologist' in request.POST:                                         
-        doctor=request.POST.get('new_pathologist')
-        specialization=request.POST.get('specialization')
-        phone=request.POST.get('phone')
+    elif 'add_pathologist' in request_body:                                         
+        doctor=request_body['new_pathologist']
+        specialization=request_body['specialization']
+        phone=request_body['phone']
         Pathologist.objects.create(
         pathologist_name=doctor,
         pathologist_phone=phone,
@@ -88,16 +90,16 @@ def compounder_api_handler(request):
     
 
     # remove doctor by changing active status
-    elif 'remove_doctor' in request.POST:                              
-        doctor=request.POST.get('doctor_active')
+    elif 'remove_doctor' in request_body:                              
+        doctor=request_body['doctor_active']
         Doctor.objects.filter(id=doctor).update(active=False)
         doc=Doctor.objects.get(id=doctor).doctor_name
         data={'status':1, 'id':doctor, 'doc':doc}
         return JsonResponse(data)
     
     # remove pathologist by changing active status
-    elif 'remove_pathologist' in request.POST:                              
-        doctor=request.POST.get('pathologist_active')
+    elif 'remove_pathologist' in request_body:                              
+        doctor=request_body['pathologist_active']
         Pathologist.objects.filter(id=doctor).update(active=False)
         doc=Pathologist.objects.get(id=doctor).pathologist_name
         data={'status':1, 'id':doctor, 'doc':doc}
@@ -158,7 +160,58 @@ def compounder_api_handler(request):
                             status = "Rejected"
                         dic['status']=status
                     inbox.append(dic)
-        return JsonResponse({status:1,'inbox':inbox[0]})
+        return JsonResponse({'status':1,'inbox':inbox[0]})
+    
+    elif 'get_doctors' in request_body :
+        doctors = Doctor.objects.filter(active=True).order_by('id')
+        serializer = serializers.DoctorSerializer(doctors,many=True)
+        return JsonResponse({ 'status':1 , 'doctors':serializer.data })
+    
+    elif 'get_pathologists' in request_body :
+        pathologists = Pathologist.objects.filter(active=True).order_by('id')
+        serializer = serializers.PathologistSerializer(pathologists,many=True)
+        return JsonResponse({'status':1,'pathologists':serializer.data})
+    
+    elif 'get_doctor_schedule' in request_body :
+        # schedule=Doctors_Schedule.objects.select_related('doctor_id').all().order_by('day','doctor_id')
+        doctors=Doctor.objects.filter(active=True).order_by('id')
+        schedules = []
+        for doctor in doctors :
+            obj1 = {}
+            schedule = Doctors_Schedule.objects.filter(doctor_id = doctor.id)
+            availability = []
+            for sch in schedule : 
+                obj = {}
+                obj['day'] = sch.day
+                obj['time'] = str(convert_to_am_pm(str(sch.from_time))) + "-" +str(convert_to_am_pm(str(sch.to_time)))
+                availability.append(obj)
+            obj1['name'] = doctor.doctor_name
+            obj1['specialization'] = doctor.specialization
+            obj1['availability'] = availability
+            schedules.append(obj1)
+                        
+        return JsonResponse({ 'status':1, 'schedule':schedules })
+    
+    elif 'get_pathologist_schedule' in request_body :
+        # schedule=Doctors_Schedule.objects.select_related('doctor_id').all().order_by('day','doctor_id')
+        pathologists=Pathologist.objects.filter(active=True).order_by('id')
+        schedules = []
+        for pathologist in pathologists :
+            obj1 = {}
+            schedule = Pathologist_Schedule.objects.filter(pathologist_id = pathologist.id)
+            availability = []
+            for sch in schedule : 
+                obj = {}
+                obj['day'] = sch.day
+                obj['time'] = str(convert_to_am_pm(str(sch.from_time))) + "-" +str(convert_to_am_pm(str(sch.to_time)))
+                availability.append(obj)
+            obj1['name'] = pathologist.pathologist_name
+            obj1['specialization'] = pathologist.specialization
+            obj1['availability'] = availability
+            schedules.append(obj1)
+                        
+        return JsonResponse({ 'status':1, 'schedule':schedules })
+        
         
 
     elif 'add_stock' in request.POST:
@@ -232,12 +285,12 @@ def compounder_api_handler(request):
             data={'status':status}
             return JsonResponse(data)
     # edit schedule for doctors
-    elif 'edit_1' in request.POST:                                             
-        doctor = request.POST.get('doctor')
-        day = request.POST.get('day')
-        time_in = request.POST.get('time_in')
-        time_out = request.POST.get('time_out')
-        room = request.POST.get('room')
+    elif 'edit_1' in request_body:                                             
+        doctor = request_body['doctor']
+        day = request_body['day']
+        time_in = request_body['time_in']
+        time_out = request_body['time_out']
+        room = request_body['room']
         schedule = Doctors_Schedule.objects.select_related('doctor_id').filter(doctor_id=doctor, day=day)
         doctor_id = Doctor.objects.get(id=doctor)
         if schedule.count() == 0:
@@ -252,22 +305,21 @@ def compounder_api_handler(request):
 
 
     # remove schedule for a doctor
-    elif 'rmv' in request.POST:  
-        doctor = request.POST.get('doctor')
-        
-        day = request.POST.get('day')
+    elif 'rmv' in request_body:  
+        doctor = request_body['doctor']
+        day = request_body['day']
         Doctors_Schedule.objects.select_related('doctor_id').filter(doctor_id=doctor, day=day).delete()
         data = {'status': 1}
         return JsonResponse(data)
     
     
      # edit schedule for pathologists
-    elif 'edit12' in request.POST:                                             
-        doctor = request.POST.get('pathologist')
-        day = request.POST.get('day')
-        time_in = request.POST.get('time_in')
-        time_out = request.POST.get('time_out')
-        room = request.POST.get('room')
+    elif 'edit12' in request_body:                                             
+        doctor = request_body['pathologist']
+        day = request_body['day']
+        time_in = request_body['time_in']
+        time_out = request_body['time_out']
+        room = request_body['room']
         pathologist_id = Pathologist.objects.get(id=doctor)
         schedule = Pathologist_Schedule.objects.select_related('pathologist_id').filter(pathologist_id=doctor, day=day)
         if schedule.count() == 0:
@@ -282,10 +334,9 @@ def compounder_api_handler(request):
     
     
     # remove schedule for a doctor
-    elif 'rmv1' in request.POST:  
-        doctor = request.POST.get('pathologist')
-        
-        day = request.POST.get('day')
+    elif 'rmv1' in request_body:  
+        doctor = request_body['pathologist']
+        day = request_body['day']
         Pathologist_Schedule.objects.select_related('pathologist_id').filter(pathologist_id=doctor, day=day).delete()
         data = {'status': 1}
         return JsonResponse(data)
@@ -1039,10 +1090,11 @@ def compounder_api_handler(request):
 
 @api_view(['POST'])
 def student_api_handler(request):
-    
-    if 'feed_submit' in request.POST:
+    request_body = request.body.decode('utf-8')
+    request_body = json.loads(request_body)
+    if 'feed_submit' in request_body:
         user_id = ExtraInfo.objects.select_related('user','department').get(user=request.user)
-        feedback = request.POST.get('feedback')
+        feedback = request_body['feedback']
         Complaint.objects.create(
             user_id=user_id,
             complaint=feedback,
@@ -1053,20 +1105,21 @@ def student_api_handler(request):
         
         return JsonResponse(data)
 
-    elif 'medical_relief_submit' in request.POST:
-        designation = request.POST.get('designation')
+    elif 'medical_relief_submit' in request_body:
+        # print(request_body)
+        designation = request_body['designation']
         # print("# #")
         # print(designation)
         user=ExtraInfo.objects.get(pk=designation)
-        description = request.POST.get('description')
+        description = request_body['description']
          
         # Retrieve the uploaded file from request.FILES
-        uploaded_file = request.FILES.get('file')
+        # uploaded_file = request.FILES.get('file')
 
         # Create an instance of the medical_relief model
         form_object = medical_relief(
             description=description,
-            file=uploaded_file
+            # file=uploaded_file
         )
 
         # Save the form object
@@ -1082,13 +1135,13 @@ def student_api_handler(request):
         # Create a file entry using the create_file utility function
         send_file_id = create_file(
             uploader=request.user.username,
-            uploader_designation=request.session['currentDesignationSelected'],
+            uploader_designation=request_body['selected_role'],
             receiver=designation,
             receiver_designation=d.designation,
             src_module="health_center",
             src_object_id=str(request_object.id),
             file_extra_JSON={"value": 2},
-            attached_file=uploaded_file  
+            # attached_file=uploaded_file  
         )  
         healthcare_center_notif(request.user,user.user,'rel_forward','')
         request_object.file_id = send_file_id
@@ -1207,6 +1260,82 @@ def student_api_handler(request):
             }
         }
         return JsonResponse({'status':1,"presc_context":prescContext})
+    elif "get_annoucements" in request_body:
+        announcements_data=Announcements.objects.all().order_by('-id').values()
+        serializer = serializers.AnnouncementSerializer(announcements_data,many=True)
+        return JsonResponse({'status':1, 'announcements' : serializer.data})
+    elif "get_relief" in request_body:
+        uploader_outbox=view_outbox(username=request.user.username,designation=request_body['selected_role'] ,src_module='health_center')
+        medicalrelief=medical_relief.objects.all()
+        uploader_inbox=view_inbox(username=request.user.username,designation=request_body['selected_role'],src_module='health_center')
+        medicalRelief=[]
+        for out in uploader_outbox:
+                dic={}
+            
+                for mr in medicalrelief:
+                    if mr.file_id==int(out['id']):   
+                        dic['id']=out['id']                    
+                        dic['upload_date']=datetime.fromisoformat(out['upload_date']).date()                   
+                        dic['desc']=mr.description
+                        # dic['file']=view_file(file_id=out['id'])['upload_file']       
+                        dic['status']=mr.acc_admin_forward_flag
+                        dic['approval_date']=''
+            
+                for inb in uploader_inbox:
+                    if dic['id']==inb['id']:
+                        dic['approval_date']=datetime.fromisoformat(inb['upload_date']).date()
+                medicalRelief.append(dic)
+            
+        return JsonResponse({'status':1, 'relief': medicalRelief})
+    elif 'get_doctors' in request_body :
+        doctors = Doctor.objects.filter(active=True).order_by('id')
+        serializer = serializers.DoctorSerializer(doctors,many=True)
+        return JsonResponse({ 'status':1 , 'doctors':serializer.data })
+    
+    elif 'get_pathologists' in request_body :
+        pathologists = Pathologist.objects.filter(active=True).order_by('id')
+        serializer = serializers.PathologistSerializer(pathologists,many=True)
+        return JsonResponse({'status':1,'pathologists':serializer.data})
+    
+    elif 'get_doctor_schedule' in request_body :
+        # schedule=Doctors_Schedule.objects.select_related('doctor_id').all().order_by('day','doctor_id')
+        doctors=Doctor.objects.filter(active=True).order_by('id')
+        schedules = []
+        for doctor in doctors :
+            obj1 = {}
+            schedule = Doctors_Schedule.objects.filter(doctor_id = doctor.id)
+            availability = []
+            for sch in schedule : 
+                obj = {}
+                obj['day'] = sch.day
+                obj['time'] = str(convert_to_am_pm(str(sch.from_time))) + "-" +str(convert_to_am_pm(str(sch.to_time)))
+                availability.append(obj)
+            obj1['name'] = doctor.doctor_name
+            obj1['specialization'] = doctor.specialization
+            obj1['availability'] = availability
+            schedules.append(obj1)
+                        
+        return JsonResponse({ 'status':1, 'schedule':schedules })
+    
+    elif 'get_pathologist_schedule' in request_body :
+        # schedule=Doctors_Schedule.objects.select_related('doctor_id').all().order_by('day','doctor_id')
+        pathologists=Pathologist.objects.filter(active=True).order_by('id')
+        schedules = []
+        for pathologist in pathologists :
+            obj1 = {}
+            schedule = Pathologist_Schedule.objects.filter(pathologist_id = pathologist.id)
+            availability = []
+            for sch in schedule : 
+                obj = {}
+                obj['day'] = sch.day
+                obj['time'] = str(convert_to_am_pm(str(sch.from_time))) + "-" +str(convert_to_am_pm(str(sch.to_time)))
+                availability.append(obj)
+            obj1['name'] = pathologist.pathologist_name
+            obj1['specialization'] = pathologist.specialization
+            obj1['availability'] = availability
+            schedules.append(obj1)
+                        
+        return JsonResponse({ 'status':1, 'schedule':schedules })
 
 # def getDesignation(request):
 #     user = request.user

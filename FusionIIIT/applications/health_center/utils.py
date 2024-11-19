@@ -402,7 +402,7 @@ def compounder_view_handler(request):
                     else :
                         Required_medicine.objects.create(
                             medicine_id = med_id,
-                            quantiy = qty,
+                            quantity = qty,
                             threshold = med_id.threshold
                         )
         return JsonResponse({"status":1})
@@ -904,6 +904,7 @@ def student_view_handler(request):
         # Retrieve HoldsDesignation instances
         d = HoldsDesignation.objects.get(user__username=designation)
         d1 = HoldsDesignation.objects.get(user__username=request.user)
+        print(request.session['currentDesignationSelected'])
 
         # Create a file entry using the create_file utility function
         send_file_id = create_file(
