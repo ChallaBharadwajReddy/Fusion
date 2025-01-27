@@ -253,12 +253,11 @@ def compounder_api_handler(request):
             data = {'status': status,'medicine':medicine_id.brand_name,'supplier':supplier,'expiry_date':expiry,'quantity':qty}
             return JsonResponse(data)
     # edit Threshold
-    elif 'edit_threshold' in request.POST:
+    elif 'edit_threshold' in request_body:
         try:
-            medicine_with_id = request.POST.get('medicine_id')
-            medicine = medicine_with_id.split(',')[0]
-            new_threshold = int(request.POST.get('threshold'))
-            threshold_med=All_Medicine.objects.get(brand_name = medicine)
+            medicine_id = request_body['medicine_id']
+            new_threshold = int(request_body['threshold'])
+            threshold_med=All_Medicine.objects.get(id = medicine_id)
             threshold_med.threshold=new_threshold
             threshold_med.save()
             if Required_medicine.objects.filter(medicine_id = threshold_med).exists():
@@ -381,9 +380,9 @@ def compounder_api_handler(request):
         return JsonResponse(data)
 
 
-    elif 'get_stock' in request.POST:
+    elif 'get_stock' in request_body:
         try:
-            medicine_name_and_id = request.POST.get('medicine_name_for_stock')
+            medicine_name_and_id = request_body['medicine_name_for_stock']
             medicine_name = medicine_name_and_id.split(",")[0]
             id=0
             if(len(medicine_name_and_id.split(",")) > 1) :
@@ -846,10 +845,10 @@ def compounder_api_handler(request):
         print("after")
         data = {'status': 1}
         return JsonResponse(data)
-    elif 'datatype' in request.POST and request.POST['datatype'] == 'patientlog':
-                 search = request.POST.get('search_patientlog')
+    elif 'datatype' in request_body and request_body['datatype'] == 'patientlog':
+                 search = request_body['search_patientlog']
                  page_size = 2
-                 new_current_page = int(request.POST.get('page'))
+                 new_current_page = int(request_body['page'])
                  new_offset = (new_current_page - 1) * page_size
                  new_report = []
                  new_prescriptions = All_Prescription.objects.filter(Q(user_id__icontains = search) | Q(details__icontains = search)).order_by('-date', '-id')[new_offset:new_offset + page_size]
@@ -878,10 +877,10 @@ def compounder_api_handler(request):
                          'previous_page_number': new_current_page - 1 if new_current_page > 1 else None,
                          'next_page_number': new_current_page + 1 if new_current_page < total_pages else None,
                          })     
-    elif 'datatype' in request.POST and request.POST['datatype'] == 'manage_stock_view':
-                search = request.POST.get('search_view_stock')
+    elif 'datatype' in request_body and request_body['datatype'] == 'manage_stock_view':
+                search = request_body['search_view_stock']
                 page_size_stock = 2
-                new_current_page_stock = int(request.POST.get('page_stock_view'))
+                new_current_page_stock = int(request_body['page_stock_view'])
                 new_offset_stock = (new_current_page_stock - 1) * page_size_stock
                 new_live_meds = []
                 new_live =Stock_entry.objects.filter(Q(Expiry_date__gte=date.today()) & Q( Q(medicine_id__brand_name__icontains = search) | Q(supplier__icontains = search))).order_by('Expiry_date')[new_offset_stock:new_offset_stock + page_size_stock]
@@ -907,10 +906,10 @@ def compounder_api_handler(request):
                         'previous_page_number': new_current_page_stock - 1 if new_current_page_stock > 1 else None,
                         'next_page_number': new_current_page_stock + 1 if new_current_page_stock < total_pages_stock else None,
                         })
-    elif 'datatype' in request.POST and request.POST['datatype'] == 'manage_stock_expired':
-                search = request.POST.get('search_view_expired')
+    elif 'datatype' in request_body and request_body['datatype'] == 'manage_stock_expired':
+                search = request_body['search_view_expired']
                 new_page_size_stock_expired = 2
-                new_current_page_stock_expired = int(request.POST.get('page_stock_expired'))
+                new_current_page_stock_expired = int(request_body['page_stock_expired'])
                 new_offset_stock_expired = (new_current_page_stock_expired - 1 )* new_page_size_stock_expired
                 new_expired=[]
                 new_expiredData=Stock_entry.objects.filter(Q(Expiry_date__lt=date.today())&Q( Q(medicine_id__brand_name__icontains = search) | Q(supplier__icontains = search))).order_by('Expiry_date')[new_offset_stock_expired:new_offset_stock_expired + new_page_size_stock_expired]
@@ -935,10 +934,10 @@ def compounder_api_handler(request):
                          'previous_page_number': new_current_page_stock_expired - 1 if new_current_page_stock_expired > 1 else None,
                          'next_page_number': new_current_page_stock_expired + 1 if new_current_page_stock_expired < new_total_pages_stock_expired else None,
                          })
-    elif 'datatype' in request.POST and request.POST['datatype'] == 'manage_stock_required':
-                search = request.POST.get('search_view_required')
+    elif 'datatype' in request_body and request_body['datatype'] == 'manage_stock_required':
+                search = request_body['search_view_required']
                 new_page_size_stock_required = 2
-                new_current_page_stock_required = int(request.POST.get('page_stock_required'))
+                new_current_page_stock_required = int(request_body['page_stock_required'])
                 new_offset_stock_required = (new_current_page_stock_required - 1 )* new_page_size_stock_required
                 new_required=[]
                 new_requiredData=Required_medicine.objects.filter( Q(medicine_id__brand_name__icontains = search))[new_offset_stock_required:new_offset_stock_required + new_page_size_stock_required]
