@@ -214,16 +214,13 @@ def compounder_api_handler(request):
         
         
 
-    elif 'add_stock' in request.POST:
+    elif 'add_stock' in request_body:
         try:
-            medicine = request.POST.get('medicine_id')
-            # threshold_a = request.POST.get('threshold_a')
-            med_brand_name = medicine.split(',')[0]
-            id = medicine.split(',')[1]
+            id = request_body['medicine_id']
             medicine_id = All_Medicine.objects.get(id = id)
-            qty = int(request.POST.get('quantity'))
-            supplier=request.POST.get('supplier')
-            expiry=request.POST.get('expiry_date')
+            qty = int(request_body['quantity'])
+            supplier=request_body['supplier']
+            expiry=request_body['expiry_date']
             tot_rows = Stock_entry.objects.all().count()
             tot_rows1 = Present_Stock.objects.all().count()
             stk=Stock_entry.objects.create(
@@ -341,14 +338,14 @@ def compounder_api_handler(request):
         return JsonResponse(data)
     
 
-    elif 'add_medicine' in request.POST:
-        medicine = request.POST.get('new_medicine')
+    elif 'add_medicine' in request_body:
+        medicine = request_body['new_medicine']
         # quantity = request.POST.get('new_quantity')
-        threshold = request.POST.get('threshold')
-        brand_name = request.POST.get('brand_name')
-        constituents = request.POST.get('constituents')
-        manufacture_name = request.POST.get('manufacture_name')
-        packsize = request.POST.get('packsize')
+        threshold = request_body['threshold']
+        brand_name = request_body['brand_name']
+        constituents = request_body['constituents']
+        manufacture_name = request_body['manufacture_name']
+        packsize = request_body['packsize']
         # new_supplier = request.POST.get('new_supplier')
         # new_expiry_date = request.POST.get('new_expiry_date')
         tot_rows = All_Medicine.objects.all().count()
