@@ -436,8 +436,8 @@ def compounder_api_handler(request):
         return JsonResponse({"status":status,"med_name":med_name,"id":id})
     
 
-    elif 'user_for_dependents' in request.POST:
-        user = request.POST.get('user_for_dependents')
+    elif 'user_for_dependents' in request_body:
+        user = request_body['user_for_dependents']
         if not User.objects.filter(username__iexact = user).exists():
             return JsonResponse({"status":-1})
         user_id = User.objects.get(username__iexact = user)
@@ -452,47 +452,47 @@ def compounder_api_handler(request):
         if(len(dep) == 0) :
             return JsonResponse({'status':-2})
         return JsonResponse({'status':1,'dep':dep}) 
-    elif 'prescribe_b' in request.POST:
-        user_id = request.POST.get('user')
-        doctor_id = request.POST.get('doctor')
+    elif 'prescribe_b' in request_body:
+        user_id = request_body['user']
+        doctor_id = request_body['doctor']
         if not User.objects.filter(username__iexact = user_id).exists():
             return JsonResponse({"status":-1}) 
         if doctor_id == 'null' :
             doctor = None
         else:
-            doctor = Doctor.objects.get(id=doctor_id)
+            doctor = Doctor.objects.get(doctor_name=doctor_id)
 
         
-        is_dependent=request.POST.get('is_dependent')
+        is_dependent=request_body['is_dependent']
         fid=0
-        uploaded_file = request.FILES.get('file')
-        if uploaded_file != None :
-            f=uploaded_file.read()
-            new_file=files.objects.create(
-                file_data=f
-            )
-            fid=new_file.id
+        # uploaded_file = request.FILES.get('file')
+        # if uploaded_file != None :
+        #     f=uploaded_file.read()
+        #     new_file=files.objects.create(
+        #         file_data=f
+        #     )
+        #     fid=new_file.id
         # with open(uploaded_file.name, 'wb+') as destination:   
         #         destination.write(f)  
         if is_dependent == "self":
             pres=All_Prescription.objects.create(
                 user_id = user_id,
                 doctor_id=doctor,
-                details = request.POST.get('details'), 
+                details = request_body['details'], 
                 date=date.today(),
-                test=request.POST.get('tests'),
+                test=request_body['tests'],
                 file_id=fid
             )
         else :
             pres=All_Prescription.objects.create(
                 user_id = user_id,
                 doctor_id=doctor,
-                details = request.POST.get('details'), 
+                details = request_body['details'], 
                 date=date.today(),
-                test=request.POST.get('tests'),
+                test=request_body['tests'],
                 is_dependent = True,
-                dependent_name = request.POST.get('dependent_name'),
-                dependent_relation = request.POST.get('dependent_relation'),
+                dependent_name = request_body['dependent_name'],
+                dependent_relation = request_body['dependent_relation'],
                 file_id=fid
             )
         # designation=request.POST.get('user')
@@ -510,9 +510,7 @@ def compounder_api_handler(request):
         # pres.file_id=send_file_id
         # pres.save()
 
-        pre_medicine = request.POST.get('pre_medicine')
-
-        medicine=eval('('+pre_medicine+')')
+        medicine = request_body['pre_medicine']
 
         for med in medicine:
             med_name = med["brand_name"]
@@ -520,7 +518,7 @@ def compounder_api_handler(request):
             quant = int(med['quantity'])
             days = med['Days'] 
             times = med['Times']
-            stock = med['stock']
+            stock = med['astock']
             med_id = All_Medicine.objects.get(id=id)
             if(stock == "," or stock == 'N/A at moment,') :
                 All_Prescribed_medicine.objects.create(
@@ -532,7 +530,7 @@ def compounder_api_handler(request):
                 )
             else :
                 stk = stock.split(",")
-                p_stock = Present_Stock.objects.get(id=int(stk[2]))
+                p_stock = Present_Stock.objects.get(id=int(stk[1]))
                 All_Prescribed_medicine.objects.create(
                     prescription_id = pres,
                     medicine_id = med_id,
@@ -1181,11 +1179,11 @@ def student_api_handler(request):
         MedicalProfile.objects.select_related('user_id','user_id__user','user_id__department', 'date_of_birth', 'gender', 'blood_type', 'height', 'weight').filter(pk=user_id).delete()
         data = {'status': 1}
         return JsonResponse({'status':1})
-    elif 'datatype' in request.POST and request.POST['datatype'] == 'patientlog':
-                 search = request.POST.get('search_patientlog')
+    elif 'datatype' in request_body and request_body['datatype'] == 'patientlog':
+                 search = request_body['search_patientlog']
                  print("patient")
                  page_size = 2
-                 new_current_page = int(request.POST.get('page'))
+                 new_current_page = int(request_body['page'])
                  new_offset = (new_current_page - 1) * page_size
                  new_report = []
                  new_prescriptions = All_Prescription.objects.filter(Q(user_id__iexact = request.user.extrainfo.id) & Q( Q(user_id__icontains = search) | Q(details__icontains = search) | (Q(dependent_name__icontains = search)))).order_by('-date', '-id')[new_offset:new_offset + page_size]
