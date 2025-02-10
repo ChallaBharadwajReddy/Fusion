@@ -375,6 +375,70 @@ def compounder_api_handler(request):
         # )
         data = {'medicine':  medicine, 'threshold': threshold,}
         return JsonResponse(data)
+    
+    elif 'get_prescription' in request_body:
+        prescription_id = request_body['presc_id']
+        prescription = All_Prescription.objects.get(id=prescription_id)
+        pre_medicine = All_Prescribed_medicine.objects.filter(prescription_id=prescription)
+        doctors=Doctor.objects.filter(active=True).order_by('id')
+        follow_presc =Prescription_followup.objects.filter(prescription_id=prescription).order_by('-id')
+        prescriptions=[]
+        for f_presc in follow_presc:
+            obj={}
+            obj['doctor'] = f_presc.Doctor_id.doctor_name
+            obj['diseaseDetails'] = f_presc.details
+            obj['followUpDate'] = f_presc.date
+            revoked=[]
+            for med in pre_medicine :
+                if med.revoked == True and med.revoked_prescription.id == f_presc.id :
+                    obj1={}
+                    obj1['medicine'] = med.medicine_id.brand_name
+                    obj1['quantity'] = med.quantity
+                    obj1['days'] = med.days
+                    obj1['times'] = med.times
+                    revoked.append(obj1)
+            obj['revoked_medicines'] = revoked
+            presc_med = []
+            for med in pre_medicine :
+                if med.prescription_followup_id == f_presc :
+                    obj1={}
+                    obj1['medicine'] = med.medicine_id.brand_name
+                    obj1['quantity'] = med.quantity
+                    obj1['days'] = med.days
+                    obj1['times'] = med.times
+                    presc_med.append(obj1)
+            obj['medicines'] = presc_med
+            tests = "No Test suggested"
+            if f_presc.test!="" :
+                tests = f_presc.test
+            obj['tests'] = tests
+            obj['file_id'] = f_presc.file_id
+            prescriptions.append(obj)
+        obj={}
+        obj['doctor'] = prescription.doctor_id.doctor_name
+        obj['diseaseDetails'] = prescription.details
+        obj['followUpDate'] = prescription.date
+        revoked=[]
+        obj['revoked_medicines'] = revoked
+        presc_med = []
+        for med in pre_medicine :
+            if med.prescription_followup_id == None :
+                obj1={}
+                obj1['medicine'] = med.medicine_id.brand_name
+                obj1['quantity'] = med.quantity
+                obj1['days'] = med.days
+                obj1['times'] = med.times
+                presc_med.append(obj1)
+        obj['medicines'] = presc_med
+        tests = "No Test suggested"
+        if prescription.test!="" :
+            tests = prescription.test
+        obj['tests'] = tests
+        obj['file_id'] = prescription.file_id
+        prescriptions.append(obj)
+        presc_serializer = serializers.PrescriptionSerializer(prescription)
+        return JsonResponse({'status':1, 'prescription':presc_serializer.data, 'prescriptions':prescriptions})
+
 
 
     elif 'get_stock' in request_body:
