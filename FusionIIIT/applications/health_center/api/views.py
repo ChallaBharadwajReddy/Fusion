@@ -375,6 +375,83 @@ def compounder_api_handler(request):
         # )
         data = {'medicine':  medicine, 'threshold': threshold,}
         return JsonResponse(data)
+    
+    elif 'get_prescription' in request_body:
+        prescription_id = request_body['presc_id']
+        prescription = All_Prescription.objects.get(id=prescription_id)
+        pre_medicine = All_Prescribed_medicine.objects.filter(prescription_id=prescription)
+        doctors=Doctor.objects.filter(active=True).order_by('id')
+        follow_presc =Prescription_followup.objects.filter(prescription_id=prescription).order_by('-id')
+        prescriptions=[]
+        for f_presc in follow_presc:
+            obj={}
+            obj['id'] = f_presc.id
+            obj['doctor'] = f_presc.Doctor_id.doctor_name
+            obj['diseaseDetails'] = f_presc.details
+            obj['followUpDate'] = f_presc.date
+            revoked=[]
+            for med in pre_medicine :
+                if med.revoked == True and med.revoked_prescription.id == f_presc.id :
+                    obj1={}
+                    obj1['medicine'] = med.medicine_id.brand_name
+                    obj1['quantity'] = med.quantity
+                    obj1['days'] = med.days
+                    obj1['times'] = med.times
+                    revoked.append(obj1)
+            obj['revoked_medicines'] = revoked
+            presc_med = []
+            for med in pre_medicine :
+                if med.prescription_followup_id == f_presc :
+                    obj1={}
+                    obj1['medicine'] = med.medicine_id.brand_name
+                    obj1['quantity'] = med.quantity
+                    obj1['days'] = med.days
+                    obj1['times'] = med.times
+                    presc_med.append(obj1)
+            obj['medicines'] = presc_med
+            tests = "No Test suggested"
+            if f_presc.test!="" :
+                tests = f_presc.test
+            obj['tests'] = tests
+            obj['file_id'] = f_presc.file_id
+            prescriptions.append(obj)
+        obj={}
+        obj['id'] = 0
+        obj['doctor'] = prescription.doctor_id.doctor_name
+        obj['diseaseDetails'] = prescription.details
+        obj['followUpDate'] = prescription.date
+        revoked=[]
+        obj['revoked_medicines'] = revoked
+        presc_med = []
+        for med in pre_medicine :
+            if med.prescription_followup_id == None :
+                obj1={}
+                obj1['medicine'] = med.medicine_id.brand_name
+                obj1['quantity'] = med.quantity
+                obj1['days'] = med.days
+                obj1['times'] = med.times
+                presc_med.append(obj1)
+        obj['medicines'] = presc_med
+        tests = "No Test suggested"
+        if prescription.test!="" :
+            tests = prescription.test
+        obj['tests'] = tests
+        obj['file_id'] = prescription.file_id
+        prescriptions.append(obj)
+        presc_serializer = serializers.PrescriptionSerializer(prescription)
+        
+        not_revoked=[]
+        for med in pre_medicine:
+            if med.revoked==False:
+                obj1={}
+                obj1['id'] = med.id
+                obj1['medicine'] = med.medicine_id.brand_name
+                obj1['quantity'] = med.quantity
+                obj1['days'] = med.days
+                obj1['times'] = med.times
+                not_revoked.append(obj1)
+        return JsonResponse({'status':1, 'prescription':presc_serializer.data, 'prescriptions':prescriptions , 'not_revoked' : not_revoked})
+
 
 
     elif 'get_stock' in request_body:
@@ -436,8 +513,8 @@ def compounder_api_handler(request):
         return JsonResponse({"status":status,"med_name":med_name,"id":id})
     
 
-    elif 'user_for_dependents' in request.POST:
-        user = request.POST.get('user_for_dependents')
+    elif 'user_for_dependents' in request_body:
+        user = request_body['user_for_dependents']
         if not User.objects.filter(username__iexact = user).exists():
             return JsonResponse({"status":-1})
         user_id = User.objects.get(username__iexact = user)
@@ -452,47 +529,47 @@ def compounder_api_handler(request):
         if(len(dep) == 0) :
             return JsonResponse({'status':-2})
         return JsonResponse({'status':1,'dep':dep}) 
-    elif 'prescribe_b' in request.POST:
-        user_id = request.POST.get('user')
-        doctor_id = request.POST.get('doctor')
+    elif 'prescribe_b' in request_body:
+        user_id = request_body['user']
+        doctor_id = request_body['doctor']
         if not User.objects.filter(username__iexact = user_id).exists():
             return JsonResponse({"status":-1}) 
         if doctor_id == 'null' :
             doctor = None
         else:
-            doctor = Doctor.objects.get(id=doctor_id)
+            doctor = Doctor.objects.get(doctor_name=doctor_id)
 
         
-        is_dependent=request.POST.get('is_dependent')
+        is_dependent=request_body['is_dependent']
         fid=0
-        uploaded_file = request.FILES.get('file')
-        if uploaded_file != None :
-            f=uploaded_file.read()
-            new_file=files.objects.create(
-                file_data=f
-            )
-            fid=new_file.id
+        # uploaded_file = request.FILES.get('file')
+        # if uploaded_file != None :
+        #     f=uploaded_file.read()
+        #     new_file=files.objects.create(
+        #         file_data=f
+        #     )
+        #     fid=new_file.id
         # with open(uploaded_file.name, 'wb+') as destination:   
         #         destination.write(f)  
         if is_dependent == "self":
             pres=All_Prescription.objects.create(
                 user_id = user_id,
                 doctor_id=doctor,
-                details = request.POST.get('details'), 
+                details = request_body['details'], 
                 date=date.today(),
-                test=request.POST.get('tests'),
+                test=request_body['tests'],
                 file_id=fid
             )
         else :
             pres=All_Prescription.objects.create(
                 user_id = user_id,
                 doctor_id=doctor,
-                details = request.POST.get('details'), 
+                details = request_body['details'], 
                 date=date.today(),
-                test=request.POST.get('tests'),
+                test=request_body['tests'],
                 is_dependent = True,
-                dependent_name = request.POST.get('dependent_name'),
-                dependent_relation = request.POST.get('dependent_relation'),
+                dependent_name = request_body['dependent_name'],
+                dependent_relation = request_body['dependent_relation'],
                 file_id=fid
             )
         # designation=request.POST.get('user')
@@ -510,9 +587,7 @@ def compounder_api_handler(request):
         # pres.file_id=send_file_id
         # pres.save()
 
-        pre_medicine = request.POST.get('pre_medicine')
-
-        medicine=eval('('+pre_medicine+')')
+        medicine = request_body['pre_medicine']
 
         for med in medicine:
             med_name = med["brand_name"]
@@ -520,7 +595,7 @@ def compounder_api_handler(request):
             quant = int(med['quantity'])
             days = med['Days'] 
             times = med['Times']
-            stock = med['stock']
+            stock = med['astock']
             med_id = All_Medicine.objects.get(id=id)
             if(stock == "," or stock == 'N/A at moment,') :
                 All_Prescribed_medicine.objects.create(
@@ -532,7 +607,7 @@ def compounder_api_handler(request):
                 )
             else :
                 stk = stock.split(",")
-                p_stock = Present_Stock.objects.get(id=int(stk[2]))
+                p_stock = Present_Stock.objects.get(id=int(stk[1]))
                 All_Prescribed_medicine.objects.create(
                     prescription_id = pres,
                     medicine_id = med_id,
@@ -627,44 +702,41 @@ def compounder_api_handler(request):
         # return JsonResponse(data)
         return JsonResponse({"status":1})
     
-    elif 'presc_followup' in request.POST:
-        pre_id=request.POST.get("pre_id")
+    elif 'presc_followup' in request_body:
+        pre_id=request_body["pre_id"]
         presc = All_Prescription.objects.get(id=int(pre_id))
 
-        doctor_id = request.POST.get('doctor')
-        if doctor_id == "null":
+        doctor_id = request_body['doctor']
+        if doctor_id == 'null' :
             doctor = None
         else:
-            doctor = Doctor.objects.get(id=doctor_id)
+            doctor = Doctor.objects.get(doctor_name=doctor_id)
         
         fid=0
-        uploaded_file = request.FILES.get('file')
-        if uploaded_file != None :
-            f=uploaded_file.read()
-            new_file=files.objects.create(
-                file_data=f
-            )
-            fid=new_file.id
+        # uploaded_file = request.FILES.get('file')
+        # if uploaded_file != None :
+        #     f=uploaded_file.read()
+        #     new_file=files.objects.create(
+        #         file_data=f
+        #     )
+        #     fid=new_file.id
 
         followup = Prescription_followup.objects.create(
             prescription_id=presc,
             Doctor_id=doctor,
-            details = request.POST.get('details'),
-            test = request.POST.get('tests'),
+            details = request_body['details'],
+            test = request_body['tests'],
             date = date.today(),
             file_id = fid
         )
-
-        pre_medicine = request.POST.get('pre_medicine')
-
-        medicine=eval('('+pre_medicine+')')
+        medicine= request_body['pre_medicine']
         for med in medicine:
-            med_name = med["med_name"]
+            med_name = med["brand_name"]
             id = med_name.split(',')[1]
             quant = int(med['quantity'])
             days = med['Days'] 
             times = med['Times']
-            stock = med['stock']
+            stock = med['astock']
             med_id = All_Medicine.objects.get(id = id)
             if(stock == ',' or stock == "N/A at moment,"):
                 All_Prescribed_medicine.objects.create(
@@ -677,7 +749,7 @@ def compounder_api_handler(request):
                 )
             else :    
                 stk = stock.split(",")
-                p_stock = Present_Stock.objects.get(id=int(stk[2]))
+                p_stock = Present_Stock.objects.get(id=int(stk[1]))
                 All_Prescribed_medicine.objects.create(
                     prescription_id = presc,
                     medicine_id = med_id,
@@ -702,20 +774,16 @@ def compounder_api_handler(request):
                     else :
                         Required_medicine.objects.create(
                             medicine_id = med_id,
-                            quantiy = qty,
+                            quantity = qty,
                             threshold = med_id.threshold
                         )
-        revoked = request.POST.get('revoked')
-        r_medicine = eval('(' + revoked+')')
+        r_medicine = request_body['revoked']
         for med in r_medicine:
-            med_id=med["med_id"]
-            checked = med['checked']
-            if checked == 'true' :
-                presc_med_id = All_Prescribed_medicine.objects.get(id=med_id)
-                presc_med_id.revoked = True
-                presc_med_id.revoked_date = date.today()
-                presc_med_id.revoked_prescription = followup
-                presc_med_id.save()
+            presc_med_id = All_Prescribed_medicine.objects.get(id=int(med))
+            presc_med_id.revoked = True
+            presc_med_id.revoked_date = date.today()
+            presc_med_id.revoked_prescription = followup
+            presc_med_id.save()
         
         return JsonResponse({"status":1})
     
@@ -1147,6 +1215,83 @@ def student_api_handler(request):
         # print(file_details_dict)   
         return JsonResponse({'status': 1})
     
+    elif 'get_prescription' in request_body:
+        prescription_id = request_body['presc_id']
+        prescription = All_Prescription.objects.get(id=prescription_id)
+        pre_medicine = All_Prescribed_medicine.objects.filter(prescription_id=prescription)
+        doctors=Doctor.objects.filter(active=True).order_by('id')
+        follow_presc =Prescription_followup.objects.filter(prescription_id=prescription).order_by('-id')
+        prescriptions=[]
+        for f_presc in follow_presc:
+            obj={}
+            obj['id'] = f_presc.id
+            obj['doctor'] = f_presc.Doctor_id.doctor_name
+            obj['diseaseDetails'] = f_presc.details
+            obj['followUpDate'] = f_presc.date
+            revoked=[]
+            for med in pre_medicine :
+                if med.revoked == True and med.revoked_prescription.id == f_presc.id :
+                    obj1={}
+                    obj1['medicine'] = med.medicine_id.brand_name
+                    obj1['quantity'] = med.quantity
+                    obj1['days'] = med.days
+                    obj1['times'] = med.times
+                    revoked.append(obj1)
+            obj['revoked_medicines'] = revoked
+            presc_med = []
+            for med in pre_medicine :
+                if med.prescription_followup_id == f_presc :
+                    obj1={}
+                    obj1['medicine'] = med.medicine_id.brand_name
+                    obj1['quantity'] = med.quantity
+                    obj1['days'] = med.days
+                    obj1['times'] = med.times
+                    presc_med.append(obj1)
+            obj['medicines'] = presc_med
+            tests = "No Test suggested"
+            if f_presc.test!="" :
+                tests = f_presc.test
+            obj['tests'] = tests
+            obj['file_id'] = f_presc.file_id
+            prescriptions.append(obj)
+        obj={}
+        obj['id'] = 0
+        obj['doctor'] = prescription.doctor_id.doctor_name
+        obj['diseaseDetails'] = prescription.details
+        obj['followUpDate'] = prescription.date
+        revoked=[]
+        obj['revoked_medicines'] = revoked
+        presc_med = []
+        for med in pre_medicine :
+            if med.prescription_followup_id == None :
+                obj1={}
+                obj1['medicine'] = med.medicine_id.brand_name
+                obj1['quantity'] = med.quantity
+                obj1['days'] = med.days
+                obj1['times'] = med.times
+                presc_med.append(obj1)
+        obj['medicines'] = presc_med
+        tests = "No Test suggested"
+        if prescription.test!="" :
+            tests = prescription.test
+        obj['tests'] = tests
+        obj['file_id'] = prescription.file_id
+        prescriptions.append(obj)
+        presc_serializer = serializers.PrescriptionSerializer(prescription)
+        
+        not_revoked=[]
+        for med in pre_medicine:
+            if med.revoked==False:
+                obj1={}
+                obj1['id'] = med.id
+                obj1['medicine'] = med.medicine_id.brand_name
+                obj1['quantity'] = med.quantity
+                obj1['days'] = med.days
+                obj1['times'] = med.times
+                not_revoked.append(obj1)
+        return JsonResponse({'status':1, 'prescription':presc_serializer.data, 'prescriptions':prescriptions , 'not_revoked' : not_revoked})
+
+
     elif 'acc_admin_forward' in request.POST:
         file_id=request.POST['file_id']
         rec=File.objects.get(id=file_id)
@@ -1181,11 +1326,11 @@ def student_api_handler(request):
         MedicalProfile.objects.select_related('user_id','user_id__user','user_id__department', 'date_of_birth', 'gender', 'blood_type', 'height', 'weight').filter(pk=user_id).delete()
         data = {'status': 1}
         return JsonResponse({'status':1})
-    elif 'datatype' in request.POST and request.POST['datatype'] == 'patientlog':
-                 search = request.POST.get('search_patientlog')
+    elif 'datatype' in request_body and request_body['datatype'] == 'patientlog':
+                 search = request_body['search_patientlog']
                  print("patient")
                  page_size = 2
-                 new_current_page = int(request.POST.get('page'))
+                 new_current_page = int(request_body['page'])
                  new_offset = (new_current_page - 1) * page_size
                  new_report = []
                  new_prescriptions = All_Prescription.objects.filter(Q(user_id__iexact = request.user.extrainfo.id) & Q( Q(user_id__icontains = search) | Q(details__icontains = search) | (Q(dependent_name__icontains = search)))).order_by('-date', '-id')[new_offset:new_offset + page_size]

@@ -58,6 +58,23 @@ class PathologistScheduleSerializer(serializers.ModelSerializer):
         model=Pathologist_Schedule
         fields=('__all__')
 
+class PrescriptionSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model=All_Prescription
+        fields=('__all__')
+        
+class followupSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model=Prescription_followup
+        fields=('__all__')
+        
+class prescmedSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model=All_Prescribed_medicine
+        fields=('__all__')
 class ComplaintSerializer(serializers.ModelSerializer):
     
     class Meta:
